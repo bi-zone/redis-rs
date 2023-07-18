@@ -177,7 +177,7 @@ impl ConnectionManager {
 
     /// Sends an already encoded (packed) command into the TCP socket and
     /// reads the single response from it.
-    pub async fn send_packed_command(&mut self, cmd: &Cmd) -> RedisResult<Value> {
+    pub async fn send_packed_command(&self, cmd: &Cmd) -> RedisResult<Value> {
         // Clone connection to avoid having to lock the ArcSwap in write mode
         let guard = self.connection.load();
         let connection_result = (**guard)
@@ -194,7 +194,7 @@ impl ConnectionManager {
     /// and reads `count` responses from it.  This is used to implement
     /// pipelining.
     pub async fn send_packed_commands(
-        &mut self,
+        &self,
         cmd: &crate::Pipeline,
         offset: usize,
         count: usize,
@@ -216,7 +216,7 @@ impl ConnectionManager {
 
 impl ConnectionLike for ConnectionManager {
     fn req_packed_command<'a>(&'a mut self, cmd: &'a Cmd) -> RedisFuture<'a, Value> {
-        (async move { self.send_packed_command(cmd).await }).boxed()
+        self.send_packed_command(cmd).boxed()
     }
 
     fn req_packed_commands<'a>(
@@ -225,7 +225,7 @@ impl ConnectionLike for ConnectionManager {
         offset: usize,
         count: usize,
     ) -> RedisFuture<'a, Vec<Value>> {
-        (async move { self.send_packed_commands(cmd, offset, count).await }).boxed()
+        self.send_packed_commands(cmd, offset, count).boxed()
     }
 
     fn get_db(&self) -> i64 {

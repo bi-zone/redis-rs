@@ -272,7 +272,7 @@ where
     }
 
     // `None` means that the stream was out of items causing that poll loop to shut down.
-    async fn send(&mut self, item: SinkItem) -> Result<I, Option<E>> {
+    async fn send(&self, item: SinkItem) -> Result<I, Option<E>> {
         self.send_recv_multiple(item, 1)
             .await
             // We can unwrap since we do a request for `1` item
@@ -280,7 +280,7 @@ where
     }
 
     async fn send_recv_multiple(
-        &mut self,
+        &self,
         input: SinkItem,
         count: usize,
     ) -> Result<Vec<I>, Option<E>> {
@@ -369,7 +369,7 @@ impl MultiplexedConnection {
 
     /// Sends an already encoded (packed) command into the TCP socket and
     /// reads the single response from it.
-    pub async fn send_packed_command(&mut self, cmd: &Cmd) -> RedisResult<Value> {
+    pub async fn send_packed_command(&self, cmd: &Cmd) -> RedisResult<Value> {
         let value = self
             .pipeline
             .send(cmd.get_packed_command())
@@ -384,7 +384,7 @@ impl MultiplexedConnection {
     /// and reads `count` responses from it.  This is used to implement
     /// pipelining.
     pub async fn send_packed_commands(
-        &mut self,
+        &self,
         cmd: &crate::Pipeline,
         offset: usize,
         count: usize,
@@ -404,7 +404,7 @@ impl MultiplexedConnection {
 
 impl ConnectionLike for MultiplexedConnection {
     fn req_packed_command<'a>(&'a mut self, cmd: &'a Cmd) -> RedisFuture<'a, Value> {
-        (async move { self.send_packed_command(cmd).await }).boxed()
+        self.send_packed_command(cmd).boxed()
     }
 
     fn req_packed_commands<'a>(
@@ -413,7 +413,7 @@ impl ConnectionLike for MultiplexedConnection {
         offset: usize,
         count: usize,
     ) -> RedisFuture<'a, Vec<Value>> {
-        (async move { self.send_packed_commands(cmd, offset, count).await }).boxed()
+        self.send_packed_commands(cmd, offset, count).boxed()
     }
 
     fn get_db(&self) -> i64 {
