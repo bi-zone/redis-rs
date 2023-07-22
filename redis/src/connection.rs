@@ -1200,7 +1200,7 @@ impl<'a> PubSub<'a> {
     /// appropriate type through the helper methods on it.
     pub fn get_message(&mut self) -> RedisResult<Msg> {
         loop {
-            if let Some(msg) = Msg::from_value(&self.con.recv_response()?) {
+            if let Some(msg) = Msg::from_value(&self.con.recv_response()?)? {
                 return Ok(msg);
             } else {
                 continue;
@@ -1228,30 +1228,31 @@ impl<'a> Drop for PubSub<'a> {
 /// connection.  It only contains actual message data.
 impl Msg {
     /// Tries to convert provided [`Value`] into [`Msg`].
-    pub fn from_value(value: &Value) -> Option<Self> {
-        let raw_msg: Vec<Value> = from_redis_value(value).ok()?;
+    pub fn from_value(value: &Value) -> RedisResult<Option<Self>> {
+        let raw_msg: Vec<Value> = from_redis_value(value)?;
         let mut iter = raw_msg.into_iter();
-        let msg_type: String = from_redis_value(&iter.next()?).ok()?;
+        let mut next = || iter.next().ok_or(RedisError::from((ErrorKind::ResponseError, "not enough data")));
+        let msg_type: String = from_redis_value(&next()?)?;
         let mut pattern = None;
         let payload;
         let channel;
 
         if msg_type == "message" {
-            channel = iter.next()?;
-            payload = iter.next()?;
+            channel = next()?;
+            payload = next()?;
         } else if msg_type == "pmessage" {
-            pattern = Some(iter.next()?);
-            channel = iter.next()?;
-            payload = iter.next()?;
+            pattern = Some(next()?);
+            channel = next()?;
+            payload = next()?;
         } else {
-            return None;
+            return Ok(None);
         }
 
-        Some(Msg {
+        Ok(Some(Msg {
             payload,
             channel,
             pattern,
-        })
+        }))
     }
 
     /// Returns the channel this message came on.

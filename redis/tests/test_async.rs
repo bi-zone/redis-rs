@@ -503,6 +503,8 @@ mod pub_sub {
     use std::collections::HashMap;
     use std::time::Duration;
 
+    use futures_util::pin_mut;
+
     use super::*;
 
     #[test]
@@ -513,11 +515,12 @@ mod pub_sub {
         block_on_all(async move {
             let mut pubsub_conn = ctx.async_connection().await?.into_pubsub();
             pubsub_conn.subscribe("phonewave").await?;
-            let mut pubsub_stream = pubsub_conn.on_message();
+            let pubsub_stream = pubsub_conn.on_message();
+            pin_mut!(pubsub_stream);
             let mut publish_conn = ctx.async_connection().await?;
             publish_conn.publish("phonewave", "banana").await?;
 
-            let msg_payload: String = pubsub_stream.next().await.unwrap().get_payload()?;
+            let msg_payload: String = pubsub_stream.next().await.unwrap().unwrap().get_payload()?;
             assert_eq!("banana".to_string(), msg_payload);
 
             Ok::<_, RedisError>(())
