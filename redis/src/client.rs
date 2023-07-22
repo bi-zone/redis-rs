@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 #[cfg(feature = "aio")]
 use std::pin::Pin;
@@ -11,7 +11,7 @@ use crate::{
 /// The client type.
 #[derive(Debug, Clone)]
 pub struct Client {
-    connection_info: ConnectionInfo,
+    connection_info: Arc<ConnectionInfo>,
 }
 
 /// The client acts as connector to the redis server.  By itself it does not
@@ -36,7 +36,7 @@ impl Client {
     /// checks on the URL that might make the operation fail.
     pub fn open<T: IntoConnectionInfo>(params: T) -> RedisResult<Client> {
         Ok(Client {
-            connection_info: params.into_connection_info()?,
+            connection_info: Arc::new(params.into_connection_info()?),
         })
     }
 

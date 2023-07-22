@@ -212,6 +212,11 @@ impl ConnectionManager {
         reconnect_if_dropped!(self, &result, guard);
         result
     }
+
+    /// Get information used for the connection
+    pub fn client(&self) -> &Client {
+        &self.client
+    }
 }
 
 impl ConnectionLike for ConnectionManager {
